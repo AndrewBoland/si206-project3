@@ -39,16 +39,41 @@ api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 
 CACHE_FNAME = "SI206_project3_cache.json"
 # Put the rest of your caching setup here:
+try:
+	cache_file = open(CACHE_FNAME,'r')
+	cache_contents = cache_file.read()
+	cache_file.close()
+	CACHE_DICTION = json.loads(cache_contents)
+except:
+	CACHE_DICTION = {}
 
 
 
 # Define your function get_user_tweets here:
+def get_user_tweets(user_handle):
+    twenty_tweets = []
+
+    if user_handle in CACHE_DICTION:
+        response = CACHE_DICTION[user_handle]
+    else:
+        response = api.user_timeline(user_handle)
+        CACHE_DICTION[user_handle] = response
+
+        cache_file = open(CACHE_FNAME, 'w')
+        cache_file.write(json.dumps(CACHE_DICTION))
+        cache_file.close()
+
+    for item in response:
+        twenty_tweets.append(item)
+    #print(twenty_tweets[1])
+
+    return twenty_tweets
 
 
 
 
 # Write an invocation to the function for the "umich" user timeline and save the result in a variable called umich_tweets:
-
+umich_tweets = get_user_tweets("umich")
 
 
 
@@ -83,15 +108,79 @@ CACHE_FNAME = "SI206_project3_cache.json"
 ## HINT #2: You may want to go back to a structure we used in class this week to ensure that you reference the user correctly in each Tweet record.
 ## HINT #3: The users mentioned in each tweet are included in the tweet dictionary -- you don't need to do any manipulation of the Tweet text to find out which they are! Do some nested data investigation on a dictionary that represents 1 tweet to see it!
 
+conn = sqlite3.connect('project3_tweets.db')
+cur = conn.cursor()
+
+dropStatement = 'DROP TABLE IF EXISTS Tweets'
+cur.execute(dropStatement)
+dropStatement = 'DROP TABLE IF EXISTS Users'
+cur.execute(dropStatement)
+
+createStatement = 'CREATE TABLE IF NOT EXISTS Users '
+createStatement += '(user_id TEXT PRIMARY KEY, '
+createStatement += 'screen_name TEXT, '
+createStatement += 'num_favs INTEGER, '
+createStatement += 'description TEXT)'
+cur.execute(createStatement)
+
+createStatement = 'CREATE TABLE IF NOT EXISTS Tweets '
+createStatement += '(tweet_id TEXT PRIMARY KEY, '
+createStatement += 'text TEXT, '
+createStatement += 'user_posted TEXT, '
+createStatement += 'time_posted TIMESTAMP, '
+createStatement += 'retweets INTEGER, '
+createStatement += 'FOREIGN KEY (user_posted) REFERENCES Users(user_id))'
+cur.execute(createStatement)
+
+conn.commit()
+
+def add_user(conn, cur, user, is_screen_name):
+    select_sql = "SELECT * FROM Users"
+    if (is_screen_name):
+        select_sql += " WHERE screen_name = ?"
+    else :
+        select_sql += " WHERE user_id = ?"
+    cur.execute(select_sql, (user,))
+    if not cur.fetchone():
+        user_dict = api.get_user(user)
+        info = []
+        insertStatement = 'INSERT INTO Users VALUES (?, ?, ?, ?)'
+        info.append(user_dict["id_str"])
+        info.append(user_dict["screen_name"])
+        info.append(user_dict["favourites_count"])
+        info.append(user_dict["description"])
+        cur.execute(insertStatement, info)
+        conn.commit()
+
+def add_tweet(conn, cur, tweet):
+    select_sql = "SELECT * FROM Users WHERE user_id = ?"
+    user_id = tweet["user"]["id_str"]
+    cur.execute(select_sql, (user_id,))
+    if not cur.fetchone():
+        add_user(conn, cur, user_id, False)
+
+    info = []
+    insertStatement = 'INSERT INTO Tweets VALUES (?, ?, ?, ?, ?)'
+    info.append(tweet["id_str"])
+    info.append(tweet["text"])
+    info.append(tweet["user"]["id_str"])
+    info.append(tweet["created_at"])
+    info.append(tweet["retweet_count"])
+    cur.execute(insertStatement, info)
+
+    mentions = tweet["entities"]["user_mentions"]
+    for mention in mentions:
+        add_user(conn, cur, mention["id_str"], False)
 
 
+#TODO caching?
+add_user(conn, cur, "umich", True)
 
+for tweet in umich_tweets:
+    add_tweet(conn, cur, tweet)
 
-
-
-
-
-
+conn.commit()
+conn.close()
 
 ## Task 3 - Making queries, saving data, fetching data
 
