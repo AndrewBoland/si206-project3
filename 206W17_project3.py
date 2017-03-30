@@ -180,30 +180,43 @@ for tweet in umich_tweets:
     add_tweet(conn, cur, tweet)
 
 conn.commit()
-conn.close()
 
 ## Task 3 - Making queries, saving data, fetching data
 
 # All of the following sub-tasks require writing SQL statements and executing them using Python.
 
 # Make a query to select all of the records in the Users database. Save the list of tuples in a variable called users_info.
+selectUsersStatement = 'SELECT * FROM Users'
+cur.execute(selectUsersStatement)
+users_info = cur.fetchall()
 
 # Make a query to select all of the user screen names from the database. Save a resulting list of strings (NOT tuples, the strings inside them!) in the variable screen_names. HINT: a list comprehension will make this easier to complete!
+selectUsersScreenNamesStatement = 'SELECT screen_name FROM Users'
+cur.execute(selectUsersScreenNamesStatement)
+screen_names = [tup[0] for tup in cur.fetchall()]
 
 
 # Make a query to select all of the tweets (full rows of tweet information) that have been retweeted more than 25 times. Save the result (a list of tuples, or an empty list) in a variable called more_than_25_rts.
-
+selectTweetsWithMoreThan25RTsStatement = 'SELECT * FROM Tweets WHERE retweets > 25'
+cur.execute(selectTweetsWithMoreThan25RTsStatement)
+more_than_25_rts = cur.fetchall()
+print(more_than_25_rts)
 
 
 # Make a query to select all the descriptions (descriptions only) of the users who have favorited more than 25 tweets. Access all those strings, and save them in a variable called descriptions_fav_users, which should ultimately be a list of strings.
-
+selectDescriptionsStatement = 'SELECT description FROM Users WHERE num_favs > 25'
+cur.execute(selectDescriptionsStatement)
+descriptions_fav_users = [tup[0] for tup in cur.fetchall()]
 
 
 # Make a query using an INNER JOIN to get a list of tuples with 2 elements in each tuple: the user screenname and the text of the tweet -- for each tweet that has been retweeted more than 50 times. Save the resulting list of tuples in a variable called joined_result.
+selectJoinStatement = 'SELECT U.screen_name, T.text FROM Users U INNER JOIN Tweets T ON T.user_posted = U.user_id WHERE T.retweets > 50'
+cur.execute(selectJoinStatement)
+joined_result = cur.fetchall()
 
 
 
-
+conn.close()
 ## Task 4 - Manipulating data with comprehensions & libraries
 
 ## Use a set comprehension to get a set of all words (combinations of characters separated by whitespace) among the descriptions in the descriptions_fav_users list. Save the resulting set in a variable called description_words.
