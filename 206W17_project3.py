@@ -173,7 +173,6 @@ def add_tweet(conn, cur, tweet):
         add_user(conn, cur, mention["id_str"], False)
 
 
-#TODO caching?
 add_user(conn, cur, "umich", True)
 
 for tweet in umich_tweets:
@@ -200,7 +199,6 @@ screen_names = [tup[0] for tup in cur.fetchall()]
 selectTweetsWithMoreThan25RTsStatement = 'SELECT * FROM Tweets WHERE retweets > 25'
 cur.execute(selectTweetsWithMoreThan25RTsStatement)
 more_than_25_rts = cur.fetchall()
-print(more_than_25_rts)
 
 
 # Make a query to select all the descriptions (descriptions only) of the users who have favorited more than 25 tweets. Access all those strings, and save them in a variable called descriptions_fav_users, which should ultimately be a list of strings.
@@ -216,24 +214,37 @@ joined_result = cur.fetchall()
 
 
 
-conn.close()
 ## Task 4 - Manipulating data with comprehensions & libraries
 
 ## Use a set comprehension to get a set of all words (combinations of characters separated by whitespace) among the descriptions in the descriptions_fav_users list. Save the resulting set in a variable called description_words.
+description_words = {word for description in descriptions_fav_users for word in description.split()}
 
 
 
 ## Use a Counter in the collections library to find the most common character among all of the descriptions in the descriptions_fav_users list. Save that most common character in a variable called most_common_char. Break any tie alphabetically (but using a Counter will do a lot of work for you...).
-
+most_common_char = collections.Counter([char for description in descriptions_fav_users for word in description.split() for char in word]).most_common(1)[0][0]
 
 
 ## Putting it all together...
 # Write code to create a dictionary whose keys are Twitter screen names and whose associated values are lists of tweet texts that that user posted. You may need to make additional queries to your database! To do this, you can use, and must use at least one of: the DefaultDict container in the collections library, a dictionary comprehension, list comprehension(s). Y
 # You should save the final dictionary in a variable called twitter_info_diction.
+twitter_info_diction = {}
+for user in users_info:
+    selectTweetsStatement = 'SELECT text FROM Tweets WHERE user_posted = ?'
+    cur.execute(selectTweetsStatement, (user[0],))
+    tweet_list = []
+    if not cur.fetchone():
+        tweet_list = [tweet["text"] for tweet in get_user_tweets(user[0])]
+    else:
+        tweet_list = [tup[0] for tup in cur.fetchall()]
+
+    twitter_info_diction[user[1]] = tweet_list
 
 
 
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END OF THE FILE HERE SO YOU DO NOT LOCK YOUR DATABASE (it's fixable, but it's a pain). ###
+conn.commit()
+conn.close()
 
 
 ###### TESTS APPEAR BELOW THIS LINE ######
