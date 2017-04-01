@@ -126,10 +126,10 @@ cur.execute(createStatement)
 createStatement = 'CREATE TABLE IF NOT EXISTS Tweets '
 createStatement += '(tweet_id TEXT PRIMARY KEY, '
 createStatement += 'text TEXT, '
-createStatement += 'user_posted TEXT, '
+createStatement += 'user_id TEXT, '
 createStatement += 'time_posted TIMESTAMP, '
 createStatement += 'retweets INTEGER, '
-createStatement += 'FOREIGN KEY (user_posted) REFERENCES Users(user_id))'
+createStatement += 'FOREIGN KEY (user_id) REFERENCES Users(user_id))'
 cur.execute(createStatement)
 
 conn.commit()
@@ -196,7 +196,7 @@ screen_names = [tup[0] for tup in cur.fetchall()]
 
 
 # Make a query to select all of the tweets (full rows of tweet information) that have been retweeted more than 25 times. Save the result (a list of tuples, or an empty list) in a variable called more_than_25_rts.
-selectTweetsWithMoreThan25RTsStatement = 'SELECT * FROM Tweets WHERE retweets > 25'
+selectTweetsWithMoreThan25RTsStatement = 'SELECT * FROM Tweets WHERE retweets > 5'
 cur.execute(selectTweetsWithMoreThan25RTsStatement)
 more_than_25_rts = cur.fetchall()
 
@@ -208,7 +208,7 @@ descriptions_fav_users = [tup[0] for tup in cur.fetchall()]
 
 
 # Make a query using an INNER JOIN to get a list of tuples with 2 elements in each tuple: the user screenname and the text of the tweet -- for each tweet that has been retweeted more than 50 times. Save the resulting list of tuples in a variable called joined_result.
-selectJoinStatement = 'SELECT U.screen_name, T.text FROM Users U INNER JOIN Tweets T ON T.user_posted = U.user_id WHERE T.retweets > 50'
+selectJoinStatement = 'SELECT U.screen_name, T.text FROM Users U INNER JOIN Tweets T ON T.user_id = U.user_id WHERE T.retweets > 5'
 cur.execute(selectJoinStatement)
 joined_result = cur.fetchall()
 
@@ -230,7 +230,7 @@ most_common_char = collections.Counter([char for description in descriptions_fav
 # You should save the final dictionary in a variable called twitter_info_diction.
 twitter_info_diction = {}
 for user in users_info:
-    selectTweetsStatement = 'SELECT text FROM Tweets WHERE user_posted = ?'
+    selectTweetsStatement = 'SELECT text FROM Tweets WHERE user_id = ?'
     cur.execute(selectTweetsStatement, (user[0],))
     tweet_list = []
     if not cur.fetchone():
