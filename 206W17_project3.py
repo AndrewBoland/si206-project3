@@ -53,11 +53,15 @@ except:
 def get_user_tweets(user_handle):
     twenty_tweets = []
 
-    if user_handle in CACHE_DICTION:
-        response = CACHE_DICTION[user_handle]
+    if "tweets" in CACHE_DICTION and user_handle in CACHE_DICTION["tweets"]:
+        response = CACHE_DICTION["tweets"][user_handle]
     else:
         response = api.user_timeline(user_handle)
-        CACHE_DICTION[user_handle] = response
+        if "tweets" in CACHE_DICTION:
+            CACHE_DICTION["tweets"][user_handle] = response
+        else:
+            CACHE_DICTION["tweets"] = {}
+            CACHE_DICTION["tweets"][user_handle] = response
 
         cache_file = open(CACHE_FNAME, 'w')
         cache_file.write(json.dumps(CACHE_DICTION))
@@ -133,6 +137,22 @@ createStatement += 'FOREIGN KEY (user_id) REFERENCES Users(user_id))'
 cur.execute(createStatement)
 
 conn.commit()
+def get_user(user):
+    if "users" in CACHE_DICTION and user in CACHE_DICTION["users"]:
+        response = CACHE_DICTION["users"][user]
+    else:
+        response = api.get_user(user)
+        if "users" in CACHE_DICTION:
+            CACHE_DICTION["users"][user] = response
+        else:
+            CACHE_DICTION["users"] = {}
+            CACHE_DICTION["users"][user] = response
+
+        cache_file = open(CACHE_FNAME, 'w')
+        cache_file.write(json.dumps(CACHE_DICTION))
+        cache_file.close()
+
+    return response
 
 def add_user(conn, cur, user, is_screen_name):
     select_sql = "SELECT * FROM Users"
@@ -142,7 +162,7 @@ def add_user(conn, cur, user, is_screen_name):
         select_sql += " WHERE user_id = ?"
     cur.execute(select_sql, (user,))
     if not cur.fetchone():
-        user_dict = api.get_user(user)
+        user_dict = get_user(user)
         info = []
         insertStatement = 'INSERT INTO Users VALUES (?, ?, ?, ?)'
         info.append(user_dict["id_str"])
